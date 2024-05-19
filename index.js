@@ -1,3 +1,4 @@
+"use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -34,50 +35,90 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+Object.defineProperty(exports, "__esModule", { value: true });
+var mongodb_1 = require("mongodb");
 var express = require("express");
 var app = express();
 var cors = require("cors");
 var port = process.env.PORT || 5000;
-require('dotenv').config();
+require("dotenv").config();
 // Middleware
 app.use(cors());
 app.use(express.json());
-var _a = require("mongodb"), MongoClient = _a.MongoClient, ServerApiVersion = _a.ServerApiVersion;
 var uri = "mongodb+srv://".concat(process.env.DB_USER, ":").concat(process.env.DB_PASS, "@try-myself.0cjln25.mongodb.net/?retryWrites=true&w=majority&appName=Try-Myself");
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
-var client = new MongoClient(uri, {
+var client = new mongodb_1.MongoClient(uri, {
     serverApi: {
-        version: ServerApiVersion.v1,
+        version: mongodb_1.ServerApiVersion.v1,
         strict: true,
         deprecationErrors: true,
     },
 });
 function run() {
     return __awaiter(this, void 0, void 0, function () {
+        var allProductsCollection_1, bestSellerProductCollection_1, error_1;
+        var _this = this;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
-                    _a.trys.push([0, , 3, 5]);
+                    _a.trys.push([0, 2, , 3]);
                     // Connect the client to the server	(optional starting in v4.7)
                     return [4 /*yield*/, client.connect()];
                 case 1:
                     // Connect the client to the server	(optional starting in v4.7)
                     _a.sent();
-                    // Send a ping to confirm a successful connection
-                    return [4 /*yield*/, client.db("admin").command({ ping: 1 })];
+                    allProductsCollection_1 = client
+                        .db("happy-cart")
+                        .collection("all-products");
+                    app.get("/all-products", function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+                        var result, error_2;
+                        return __generator(this, function (_a) {
+                            switch (_a.label) {
+                                case 0:
+                                    _a.trys.push([0, 2, , 3]);
+                                    return [4 /*yield*/, allProductsCollection_1.find().toArray()];
+                                case 1:
+                                    result = _a.sent();
+                                    res.send(result);
+                                    return [3 /*break*/, 3];
+                                case 2:
+                                    error_2 = _a.sent();
+                                    console.error("Error fetching products", error_2);
+                                    res.status(500).json({ error: "Internal server error" });
+                                    return [3 /*break*/, 3];
+                                case 3: return [2 /*return*/];
+                            }
+                        });
+                    }); });
+                    bestSellerProductCollection_1 = client
+                        .db("happy-cart")
+                        .collection("best-seller-products");
+                    app.get("/best-seller-products", function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+                        var result, error_3;
+                        return __generator(this, function (_a) {
+                            switch (_a.label) {
+                                case 0:
+                                    _a.trys.push([0, 2, , 3]);
+                                    return [4 /*yield*/, bestSellerProductCollection_1.find().toArray()];
+                                case 1:
+                                    result = _a.sent();
+                                    res.send(result);
+                                    return [3 /*break*/, 3];
+                                case 2:
+                                    error_3 = _a.sent();
+                                    console.error("Error Fetching Best seller Products", error_3);
+                                    return [3 /*break*/, 3];
+                                case 3: return [2 /*return*/];
+                            }
+                        });
+                    }); });
+                    return [3 /*break*/, 3];
                 case 2:
-                    // Send a ping to confirm a successful connection
-                    _a.sent();
-                    console.log("Pinged your deployment. You successfully connected to MongoDB!");
-                    return [3 /*break*/, 5];
-                case 3: 
-                // Ensures that the client will close when you finish/error
-                return [4 /*yield*/, client.close()];
-                case 4:
-                    // Ensures that the client will close when you finish/error
-                    _a.sent();
-                    return [7 /*endfinally*/];
-                case 5: return [2 /*return*/];
+                    error_1 = _a.sent();
+                    console.error("error connecting to MongoDb:", error_1);
+                    process.exit(1);
+                    return [3 /*break*/, 3];
+                case 3: return [2 /*return*/];
             }
         });
     });
