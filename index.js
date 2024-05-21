@@ -56,7 +56,7 @@ var client = new mongodb_1.MongoClient(uri, {
 });
 function run() {
     return __awaiter(this, void 0, void 0, function () {
-        var allProductsCollection_1, bestSellerProductCollection_1, error_1;
+        var userCollection_1, allProductsCollection_1, bestSellerProductCollection_1, cartCollection_1, error_1;
         var _this = this;
         return __generator(this, function (_a) {
             switch (_a.label) {
@@ -67,9 +67,15 @@ function run() {
                 case 1:
                     // Connect the client to the server	(optional starting in v4.7)
                     _a.sent();
+                    userCollection_1 = client.db("happy-cart").collection("users");
                     allProductsCollection_1 = client
                         .db("happy-cart")
                         .collection("all-products");
+                    bestSellerProductCollection_1 = client
+                        .db("happy-cart")
+                        .collection("best-seller-products");
+                    cartCollection_1 = client.db("happy-cart").collection("cart");
+                    // get data for all Products
                     app.get("/all-products", function (req, res) { return __awaiter(_this, void 0, void 0, function () {
                         var result, error_2;
                         return __generator(this, function (_a) {
@@ -90,9 +96,7 @@ function run() {
                             }
                         });
                     }); });
-                    bestSellerProductCollection_1 = client
-                        .db("happy-cart")
-                        .collection("best-seller-products");
+                    // get data for best seller Products
                     app.get("/best-seller-products", function (req, res) { return __awaiter(_this, void 0, void 0, function () {
                         var result, error_3;
                         return __generator(this, function (_a) {
@@ -107,6 +111,87 @@ function run() {
                                 case 2:
                                     error_3 = _a.sent();
                                     console.error("Error Fetching Best seller Products", error_3);
+                                    return [3 /*break*/, 3];
+                                case 3: return [2 /*return*/];
+                            }
+                        });
+                    }); });
+                    // cart collection
+                    app.get("/cart", function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+                        var email, query, result, error_4;
+                        return __generator(this, function (_a) {
+                            switch (_a.label) {
+                                case 0:
+                                    _a.trys.push([0, 2, , 3]);
+                                    email = req.query.email;
+                                    query = { email: email };
+                                    return [4 /*yield*/, cartCollection_1.find(query).toArray()];
+                                case 1:
+                                    result = _a.sent();
+                                    res.send(result);
+                                    return [3 /*break*/, 3];
+                                case 2:
+                                    error_4 = _a.sent();
+                                    console.error(error_4, "cart collection error");
+                                    return [3 /*break*/, 3];
+                                case 3: return [2 /*return*/];
+                            }
+                        });
+                    }); });
+                    //  Users Related Api
+                    app.post("/users", function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+                        var user, result;
+                        return __generator(this, function (_a) {
+                            try {
+                                user = req.body;
+                                result = userCollection_1.insertOne(user);
+                                res.send(result);
+                            }
+                            catch (error) {
+                                console.error("Error inserted of users", error);
+                            }
+                            return [2 /*return*/];
+                        });
+                    }); });
+                    // Post req for cart data
+                    app.post("/cart", function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+                        var cartItem, result, error_5;
+                        return __generator(this, function (_a) {
+                            switch (_a.label) {
+                                case 0:
+                                    _a.trys.push([0, 2, , 3]);
+                                    cartItem = req.body;
+                                    return [4 /*yield*/, cartCollection_1.insertOne(cartItem)];
+                                case 1:
+                                    result = _a.sent();
+                                    res.send(result);
+                                    return [3 /*break*/, 3];
+                                case 2:
+                                    error_5 = _a.sent();
+                                    console.error("Error inserting Data for cart", error_5);
+                                    return [3 /*break*/, 3];
+                                case 3: return [2 /*return*/];
+                            }
+                        });
+                    }); });
+                    // Delete item from cart
+                    app.delete("/cart/:id", function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+                        var id, query, result, error_6;
+                        return __generator(this, function (_a) {
+                            switch (_a.label) {
+                                case 0:
+                                    _a.trys.push([0, 2, , 3]);
+                                    id = req.params.id;
+                                    query = { _id: new mongodb_1.ObjectId(id) };
+                                    return [4 /*yield*/, cartCollection_1.deleteOne(query)];
+                                case 1:
+                                    result = _a.sent();
+                                    res.send(result);
+                                    return [3 /*break*/, 3];
+                                case 2:
+                                    error_6 = _a.sent();
+                                    console.error("Error deleting data from cart", error_6);
+                                    res.status(500).send({ message: "Internal Server Error" }); // It's good practice to send a response in case of an error
                                     return [3 /*break*/, 3];
                                 case 3: return [2 /*return*/];
                             }
