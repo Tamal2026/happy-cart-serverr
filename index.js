@@ -140,22 +140,33 @@ function run() {
                     }); });
                     //  Users Related Api
                     app.post("/users", function (req, res) { return __awaiter(_this, void 0, void 0, function () {
-                        var user, result;
+                        var user, query, existingUser, result, error_5;
                         return __generator(this, function (_a) {
-                            try {
-                                user = req.body;
-                                result = userCollection_1.insertOne(user);
-                                res.send(result);
+                            switch (_a.label) {
+                                case 0:
+                                    _a.trys.push([0, 2, , 3]);
+                                    user = req.body;
+                                    query = { email: user.email };
+                                    return [4 /*yield*/, userCollection_1.findOne(query)];
+                                case 1:
+                                    existingUser = _a.sent();
+                                    if (existingUser) {
+                                        return [2 /*return*/, res.send({ message: "User already exists", insertedId: null })];
+                                    }
+                                    result = userCollection_1.insertOne(user);
+                                    res.send(result);
+                                    return [3 /*break*/, 3];
+                                case 2:
+                                    error_5 = _a.sent();
+                                    console.error("Error inserted of users", error_5);
+                                    return [3 /*break*/, 3];
+                                case 3: return [2 /*return*/];
                             }
-                            catch (error) {
-                                console.error("Error inserted of users", error);
-                            }
-                            return [2 /*return*/];
                         });
                     }); });
                     // Post req for cart data
                     app.post("/cart", function (req, res) { return __awaiter(_this, void 0, void 0, function () {
-                        var cartItem, result, error_5;
+                        var cartItem, result, error_6;
                         return __generator(this, function (_a) {
                             switch (_a.label) {
                                 case 0:
@@ -167,8 +178,8 @@ function run() {
                                     res.send(result);
                                     return [3 /*break*/, 3];
                                 case 2:
-                                    error_5 = _a.sent();
-                                    console.error("Error inserting Data for cart", error_5);
+                                    error_6 = _a.sent();
+                                    console.error("Error inserting Data for cart", error_6);
                                     return [3 /*break*/, 3];
                                 case 3: return [2 /*return*/];
                             }
@@ -176,7 +187,7 @@ function run() {
                     }); });
                     // Delete item from cart
                     app.delete("/cart/:id", function (req, res) { return __awaiter(_this, void 0, void 0, function () {
-                        var id, query, result, error_6;
+                        var id, query, result, error_7;
                         return __generator(this, function (_a) {
                             switch (_a.label) {
                                 case 0:
@@ -189,8 +200,8 @@ function run() {
                                     res.send(result);
                                     return [3 /*break*/, 3];
                                 case 2:
-                                    error_6 = _a.sent();
-                                    console.error("Error deleting data from cart", error_6);
+                                    error_7 = _a.sent();
+                                    console.error("Error deleting data from cart", error_7);
                                     res.status(500).send({ message: "Internal Server Error" }); // It's good practice to send a response in case of an error
                                     return [3 /*break*/, 3];
                                 case 3: return [2 /*return*/];
