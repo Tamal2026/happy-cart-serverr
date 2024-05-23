@@ -44,22 +44,41 @@ async function run() {
       });
       res.send({ token });
     });
-
     // MiddleWares
+
     const verifyToken = (req, res, next) => {
       console.log(req.headers);
       if (!req.headers.authorization) {
         return res.status(401).send({ message: "Forbidden Access" });
       }
       const token = req.headers.authorization.split(" ")[1];
-      jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err:any, decoded:any) => {
-        if (err) {
-          return res.status(401).send({ message: "forbidden access" });
+      jwt.verify(
+        token,
+        process.env.ACCESS_TOKEN_SECRET,
+        (err: any, decoded: any) => {
+          if (err) {
+            return res.status(401).send({ message: "forbidden access" });
+          }
+          req.decoded = decoded;
+          next();
         }
-        req.decoded = decoded;
-        next();
-      });
+      );
     };
+
+    // Verify Admin
+    app.get("/users/admin/:email", verifyToken, async (req, res) => {
+      const email = req.params.email;
+      if (email !== req.decoded.email) {
+        return res.status(403).send({ message: "Unauthoraized Access" });
+      }
+      const query = { email: email };
+      const user = await userCollection.findOne(query);
+      let admin = false;
+      if (user) {
+      admin =  user?.role === "admin";
+      }
+      res.send({ admin });
+    });
 
     // Product Related apis
 
@@ -99,7 +118,7 @@ async function run() {
         console.error("Error inserted of users", error);
       }
     });
-    app.get("/users",  verifyToken, async (req, res) => {
+    app.get("/users", verifyToken,  async (req, res) => {
       console.log(req.headers);
       try {
         const result = await userCollection.find().toArray();

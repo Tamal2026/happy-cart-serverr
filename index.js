@@ -100,6 +100,29 @@ function run() {
                             next();
                         });
                     };
+                    // Verify Admin
+                    app.get("/users/admin/:email", verifyToken, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+                        var email, query, user, admin;
+                        return __generator(this, function (_a) {
+                            switch (_a.label) {
+                                case 0:
+                                    email = req.params.email;
+                                    if (email !== req.decoded.email) {
+                                        return [2 /*return*/, res.status(403).send({ message: "Unauthoraized Access" })];
+                                    }
+                                    query = { email: email };
+                                    return [4 /*yield*/, userCollection_1.findOne(query)];
+                                case 1:
+                                    user = _a.sent();
+                                    admin = false;
+                                    if (user) {
+                                        admin = (user === null || user === void 0 ? void 0 : user.role) === "admin";
+                                    }
+                                    res.send({ admin: admin });
+                                    return [2 /*return*/];
+                            }
+                        });
+                    }); });
                     // Product Related apis
                     // get data for all Products
                     app.get("/all-products", function (req, res) { return __awaiter(_this, void 0, void 0, function () {
