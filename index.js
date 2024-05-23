@@ -37,6 +37,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 var mongodb_1 = require("mongodb");
+var jwt = require("jsonwebtoken");
 var express = require("express");
 var app = express();
 var cors = require("cors");
@@ -56,16 +57,14 @@ var client = new mongodb_1.MongoClient(uri, {
 });
 function run() {
     return __awaiter(this, void 0, void 0, function () {
-        var userCollection_1, allProductsCollection_1, bestSellerProductCollection_1, cartCollection_1, error_1;
+        var userCollection_1, allProductsCollection_1, bestSellerProductCollection_1, cartCollection_1, verifyToken, error_1;
         var _this = this;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
                     _a.trys.push([0, 2, , 3]);
-                    // Connect the client to the server	(optional starting in v4.7)
                     return [4 /*yield*/, client.connect()];
                 case 1:
-                    // Connect the client to the server	(optional starting in v4.7)
                     _a.sent();
                     userCollection_1 = client.db("happy-cart").collection("users");
                     allProductsCollection_1 = client
@@ -75,6 +74,33 @@ function run() {
                         .db("happy-cart")
                         .collection("best-seller-products");
                     cartCollection_1 = client.db("happy-cart").collection("cart");
+                    // Jwt Related Api
+                    app.post("/jwt", function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+                        var user, token;
+                        return __generator(this, function (_a) {
+                            user = req.body;
+                            token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+                                expiresIn: "1h",
+                            });
+                            res.send({ token: token });
+                            return [2 /*return*/];
+                        });
+                    }); });
+                    verifyToken = function (req, res, next) {
+                        console.log(req.headers);
+                        if (!req.headers.authorization) {
+                            return res.status(401).send({ message: "Forbidden Access" });
+                        }
+                        var token = req.headers.authorization.split(" ")[1];
+                        jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, function (err, decoded) {
+                            if (err) {
+                                return res.status(401).send({ message: "forbidden access" });
+                            }
+                            req.decoded = decoded;
+                            next();
+                        });
+                    };
+                    // Product Related apis
                     // get data for all Products
                     app.get("/all-products", function (req, res) { return __awaiter(_this, void 0, void 0, function () {
                         var result, error_2;
@@ -116,31 +142,9 @@ function run() {
                             }
                         });
                     }); });
-                    // cart collection
-                    app.get("/cart", function (req, res) { return __awaiter(_this, void 0, void 0, function () {
-                        var email, query, result, error_4;
-                        return __generator(this, function (_a) {
-                            switch (_a.label) {
-                                case 0:
-                                    _a.trys.push([0, 2, , 3]);
-                                    email = req.query.email;
-                                    query = { email: email };
-                                    return [4 /*yield*/, cartCollection_1.find(query).toArray()];
-                                case 1:
-                                    result = _a.sent();
-                                    res.send(result);
-                                    return [3 /*break*/, 3];
-                                case 2:
-                                    error_4 = _a.sent();
-                                    console.error(error_4, "cart collection error");
-                                    return [3 /*break*/, 3];
-                                case 3: return [2 /*return*/];
-                            }
-                        });
-                    }); });
-                    //  Users Related Api
+                    //  Users Related Apis
                     app.post("/users", function (req, res) { return __awaiter(_this, void 0, void 0, function () {
-                        var user, query, existingUser, result, error_5;
+                        var user, query, existingUser, result, error_4;
                         return __generator(this, function (_a) {
                             switch (_a.label) {
                                 case 0:
@@ -157,16 +161,87 @@ function run() {
                                     res.send(result);
                                     return [3 /*break*/, 3];
                                 case 2:
-                                    error_5 = _a.sent();
-                                    console.error("Error inserted of users", error_5);
+                                    error_4 = _a.sent();
+                                    console.error("Error inserted of users", error_4);
                                     return [3 /*break*/, 3];
                                 case 3: return [2 /*return*/];
                             }
                         });
                     }); });
-                    // Post req for cart data
+                    app.get("/users", verifyToken, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+                        var result, error_5;
+                        return __generator(this, function (_a) {
+                            switch (_a.label) {
+                                case 0:
+                                    console.log(req.headers);
+                                    _a.label = 1;
+                                case 1:
+                                    _a.trys.push([1, 3, , 4]);
+                                    return [4 /*yield*/, userCollection_1.find().toArray()];
+                                case 2:
+                                    result = _a.sent();
+                                    res.send(result);
+                                    return [3 /*break*/, 4];
+                                case 3:
+                                    error_5 = _a.sent();
+                                    console.error("Error getting all users data", error_5);
+                                    res.status(500).json({ error: "Internal server error" });
+                                    return [3 /*break*/, 4];
+                                case 4: return [2 /*return*/];
+                            }
+                        });
+                    }); });
+                    app.delete("/users/:id", function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+                        var id, query, result, error_6;
+                        return __generator(this, function (_a) {
+                            switch (_a.label) {
+                                case 0:
+                                    _a.trys.push([0, 2, , 3]);
+                                    id = req.params.id;
+                                    query = { _id: new mongodb_1.ObjectId(id) };
+                                    return [4 /*yield*/, userCollection_1.deleteOne(query)];
+                                case 1:
+                                    result = _a.sent();
+                                    res.send(result);
+                                    return [3 /*break*/, 3];
+                                case 2:
+                                    error_6 = _a.sent();
+                                    console.error("Error deleting users", error_6);
+                                    return [3 /*break*/, 3];
+                                case 3: return [2 /*return*/];
+                            }
+                        });
+                    }); });
+                    // Make Admin api
+                    app.patch("/users/admin/:id", function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+                        var id, filter, updatedDoc, result, error_7;
+                        return __generator(this, function (_a) {
+                            switch (_a.label) {
+                                case 0:
+                                    _a.trys.push([0, 2, , 3]);
+                                    id = req.params.id;
+                                    filter = { _id: new mongodb_1.ObjectId(id) };
+                                    updatedDoc = {
+                                        $set: {
+                                            role: "admin",
+                                        },
+                                    };
+                                    return [4 /*yield*/, userCollection_1.updateOne(filter, updatedDoc)];
+                                case 1:
+                                    result = _a.sent();
+                                    res.send(result);
+                                    return [3 /*break*/, 3];
+                                case 2:
+                                    error_7 = _a.sent();
+                                    console.error("Error for making a user Admin", error_7);
+                                    return [3 /*break*/, 3];
+                                case 3: return [2 /*return*/];
+                            }
+                        });
+                    }); });
+                    // Cart Related Apis
                     app.post("/cart", function (req, res) { return __awaiter(_this, void 0, void 0, function () {
-                        var cartItem, result, error_6;
+                        var cartItem, result, error_8;
                         return __generator(this, function (_a) {
                             switch (_a.label) {
                                 case 0:
@@ -178,16 +253,15 @@ function run() {
                                     res.send(result);
                                     return [3 /*break*/, 3];
                                 case 2:
-                                    error_6 = _a.sent();
-                                    console.error("Error inserting Data for cart", error_6);
+                                    error_8 = _a.sent();
+                                    console.error("Error inserting Data for cart", error_8);
                                     return [3 /*break*/, 3];
                                 case 3: return [2 /*return*/];
                             }
                         });
                     }); });
-                    // Delete item from cart
                     app.delete("/cart/:id", function (req, res) { return __awaiter(_this, void 0, void 0, function () {
-                        var id, query, result, error_7;
+                        var id, query, result, error_9;
                         return __generator(this, function (_a) {
                             switch (_a.label) {
                                 case 0:
@@ -200,9 +274,30 @@ function run() {
                                     res.send(result);
                                     return [3 /*break*/, 3];
                                 case 2:
-                                    error_7 = _a.sent();
-                                    console.error("Error deleting data from cart", error_7);
+                                    error_9 = _a.sent();
+                                    console.error("Error deleting data from cart", error_9);
                                     res.status(500).send({ message: "Internal Server Error" }); // It's good practice to send a response in case of an error
+                                    return [3 /*break*/, 3];
+                                case 3: return [2 /*return*/];
+                            }
+                        });
+                    }); });
+                    app.get("/cart", function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+                        var email, query, result, error_10;
+                        return __generator(this, function (_a) {
+                            switch (_a.label) {
+                                case 0:
+                                    _a.trys.push([0, 2, , 3]);
+                                    email = req.query.email;
+                                    query = { email: email };
+                                    return [4 /*yield*/, cartCollection_1.find(query).toArray()];
+                                case 1:
+                                    result = _a.sent();
+                                    res.send(result);
+                                    return [3 /*break*/, 3];
+                                case 2:
+                                    error_10 = _a.sent();
+                                    console.error(error_10, "cart collection error");
                                     return [3 /*break*/, 3];
                                 case 3: return [2 /*return*/];
                             }

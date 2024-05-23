@@ -1,6 +1,6 @@
 import { error } from "console";
 import { MongoClient, ObjectId, ServerApiVersion } from "mongodb";
-
+const jwt = require("jsonwebtoken");
 const express = require("express");
 const app = express();
 const cors = require("cors");
@@ -25,7 +25,6 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
     const userCollection = client.db("happy-cart").collection("users");
     const allProductsCollection = client
@@ -35,6 +34,35 @@ async function run() {
       .db("happy-cart")
       .collection("best-seller-products");
     const cartCollection = client.db("happy-cart").collection("cart");
+
+    // Jwt Related Api
+
+    app.post("/jwt", async (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+        expiresIn: "1h",
+      });
+      res.send({ token });
+    });
+
+    // MiddleWares
+    const verifyToken = (req, res, next) => {
+      console.log(req.headers);
+      if (!req.headers.authorization) {
+        return res.status(401).send({ message: "Forbidden Access" });
+      }
+      const token = req.headers.authorization.split(" ")[1];
+      jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err:any, decoded:any) => {
+        if (err) {
+          return res.status(401).send({ message: "forbidden access" });
+        }
+        req.decoded = decoded;
+        next();
+      });
+    };
+
+    // Product Related apis
+
     // get data for all Products
     app.get("/all-products", async (req, res) => {
       try {
@@ -55,19 +83,7 @@ async function run() {
       }
     });
 
-    // cart collection
-    app.get("/cart", async (req, res) => {
-      try {
-        const email = req.query.email;
-        const query = { email: email };
-        const result = await cartCollection.find(query).toArray();
-        res.send(result);
-      } catch (error) {
-        console.error(error, "cart collection error");
-      }
-    });
-
-    //  Users Related Api
+    //  Users Related Apis
 
     app.post("/users", async (req, res) => {
       try {
@@ -83,8 +99,46 @@ async function run() {
         console.error("Error inserted of users", error);
       }
     });
+    app.get("/users",  verifyToken, async (req, res) => {
+      console.log(req.headers);
+      try {
+        const result = await userCollection.find().toArray();
+        res.send(result);
+      } catch (error) {
+        console.error("Error getting all users data", error);
+        res.status(500).json({ error: "Internal server error" });
+      }
+    });
 
-    // Post req for cart data
+    app.delete("/users/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const result = await userCollection.deleteOne(query);
+        res.send(result);
+      } catch (error) {
+        console.error("Error deleting users", error);
+      }
+    });
+
+    // Make Admin api
+    app.patch("/users/admin/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const filter = { _id: new ObjectId(id) };
+        const updatedDoc = {
+          $set: {
+            role: "admin",
+          },
+        };
+        const result = await userCollection.updateOne(filter, updatedDoc);
+        res.send(result);
+      } catch (error) {
+        console.error("Error for making a user Admin", error);
+      }
+    });
+
+    // Cart Related Apis
     app.post("/cart", async (req, res) => {
       try {
         const cartItem = req.body;
@@ -95,8 +149,6 @@ async function run() {
       }
     });
 
-    // Delete item from cart
-
     app.delete("/cart/:id", async (req, res) => {
       try {
         const id = req.params.id; // Fix the typo here
@@ -106,6 +158,16 @@ async function run() {
       } catch (error) {
         console.error("Error deleting data from cart", error);
         res.status(500).send({ message: "Internal Server Error" }); // It's good practice to send a response in case of an error
+      }
+    });
+    app.get("/cart", async (req, res) => {
+      try {
+        const email = req.query.email;
+        const query = { email: email };
+        const result = await cartCollection.find(query).toArray();
+        res.send(result);
+      } catch (error) {
+        console.error(error, "cart collection error");
       }
     });
 
