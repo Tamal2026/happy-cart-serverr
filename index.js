@@ -39,10 +39,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var mongodb_1 = require("mongodb");
 var jwt = require("jsonwebtoken");
 var express = require("express");
+require("dotenv").config();
+var stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 var app = express();
 var cors = require("cors");
 var port = process.env.PORT || 5000;
-require("dotenv").config();
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -57,7 +58,7 @@ var client = new mongodb_1.MongoClient(uri, {
 });
 function run() {
     return __awaiter(this, void 0, void 0, function () {
-        var userCollection_1, allProductsCollection_1, bestSellerProductCollection_1, cartCollection_1, verifyToken, error_1;
+        var userCollection_1, allProductsCollection_1, bestSellerProductCollection_1, cartCollection_1, verifyToken, verifyAdmin, error_1;
         var _this = this;
         return __generator(this, function (_a) {
             switch (_a.label) {
@@ -100,7 +101,25 @@ function run() {
                             next();
                         });
                     };
-                    // Verify Admin
+                    verifyAdmin = function (req, res, next) { return __awaiter(_this, void 0, void 0, function () {
+                        var email, query, user, isAdmin;
+                        return __generator(this, function (_a) {
+                            switch (_a.label) {
+                                case 0:
+                                    email = req.decoded.email;
+                                    query = { email: email };
+                                    return [4 /*yield*/, userCollection_1.findOne(query)];
+                                case 1:
+                                    user = _a.sent();
+                                    isAdmin = (user === null || user === void 0 ? void 0 : user.role) === "admin";
+                                    if (!isAdmin) {
+                                        return [2 /*return*/, res.status(403).send({ message: "Forbidden access" })];
+                                    }
+                                    next();
+                                    return [2 /*return*/];
+                            }
+                        });
+                    }); };
                     app.get("/users/admin/:email", verifyToken, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
                         var email, query, user, admin;
                         return __generator(this, function (_a) {
@@ -145,9 +164,104 @@ function run() {
                             }
                         });
                     }); });
+                    // Updated Product
+                    app.get("/all-products/:id", function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+                        var id, query, result, error_3;
+                        return __generator(this, function (_a) {
+                            switch (_a.label) {
+                                case 0:
+                                    _a.trys.push([0, 2, , 3]);
+                                    id = req.params.id;
+                                    query = { _id: new mongodb_1.ObjectId(id) };
+                                    return [4 /*yield*/, allProductsCollection_1.findOne(query)];
+                                case 1:
+                                    result = _a.sent();
+                                    res.send(result);
+                                    return [3 /*break*/, 3];
+                                case 2:
+                                    error_3 = _a.sent();
+                                    console.error("Error from the updated product ");
+                                    return [3 /*break*/, 3];
+                                case 3: return [2 /*return*/];
+                            }
+                        });
+                    }); });
+                    app.patch("/all-products/:id", function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+                        var product, id, filter, updatedDoc, result, error_4;
+                        return __generator(this, function (_a) {
+                            switch (_a.label) {
+                                case 0:
+                                    _a.trys.push([0, 2, , 3]);
+                                    product = req.body;
+                                    id = req.params.id;
+                                    filter = { _id: new mongodb_1.ObjectId(id) };
+                                    updatedDoc = {
+                                        $set: {
+                                            name: product.name,
+                                            category: product.category,
+                                            price: product.price,
+                                            img: product.img,
+                                            short_desc: product.short_desc,
+                                        },
+                                    };
+                                    return [4 /*yield*/, allProductsCollection_1.updateOne(filter, updatedDoc)];
+                                case 1:
+                                    result = _a.sent();
+                                    res.send(result);
+                                    return [3 /*break*/, 3];
+                                case 2:
+                                    error_4 = _a.sent();
+                                    console.error("Error from the Admin updated product");
+                                    return [3 /*break*/, 3];
+                                case 3: return [2 /*return*/];
+                            }
+                        });
+                    }); });
+                    app.post("/all-products", function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+                        var product, result, error_5;
+                        return __generator(this, function (_a) {
+                            switch (_a.label) {
+                                case 0:
+                                    _a.trys.push([0, 2, , 3]);
+                                    product = req.body;
+                                    return [4 /*yield*/, allProductsCollection_1.insertOne(product)];
+                                case 1:
+                                    result = _a.sent();
+                                    res.send(result);
+                                    return [3 /*break*/, 3];
+                                case 2:
+                                    error_5 = _a.sent();
+                                    console.error("Error from the new add product insert", error_5);
+                                    return [3 /*break*/, 3];
+                                case 3: return [2 /*return*/];
+                            }
+                        });
+                    }); });
+                    // delete product from manage users admin dashboard
+                    app.delete("/all-products/:id", verifyToken, verifyAdmin, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+                        var id, query, result, error_6;
+                        return __generator(this, function (_a) {
+                            switch (_a.label) {
+                                case 0:
+                                    _a.trys.push([0, 2, , 3]);
+                                    id = req.params.id;
+                                    query = { _id: new mongodb_1.ObjectId(id) };
+                                    return [4 /*yield*/, allProductsCollection_1.deleteOne(query)];
+                                case 1:
+                                    result = _a.sent();
+                                    res.send(result);
+                                    return [3 /*break*/, 3];
+                                case 2:
+                                    error_6 = _a.sent();
+                                    console.error("Error from delete product from the admin dashboard", error_6);
+                                    return [3 /*break*/, 3];
+                                case 3: return [2 /*return*/];
+                            }
+                        });
+                    }); });
                     // get data for best seller Products
                     app.get("/best-seller-products", function (req, res) { return __awaiter(_this, void 0, void 0, function () {
-                        var result, error_3;
+                        var result, error_7;
                         return __generator(this, function (_a) {
                             switch (_a.label) {
                                 case 0:
@@ -158,8 +272,8 @@ function run() {
                                     res.send(result);
                                     return [3 /*break*/, 3];
                                 case 2:
-                                    error_3 = _a.sent();
-                                    console.error("Error Fetching Best seller Products", error_3);
+                                    error_7 = _a.sent();
+                                    console.error("Error Fetching Best seller Products", error_7);
                                     return [3 /*break*/, 3];
                                 case 3: return [2 /*return*/];
                             }
@@ -167,7 +281,7 @@ function run() {
                     }); });
                     //  Users Related Apis
                     app.post("/users", function (req, res) { return __awaiter(_this, void 0, void 0, function () {
-                        var user, query, existingUser, result, error_4;
+                        var user, query, existingUser, result, error_8;
                         return __generator(this, function (_a) {
                             switch (_a.label) {
                                 case 0:
@@ -184,15 +298,15 @@ function run() {
                                     res.send(result);
                                     return [3 /*break*/, 3];
                                 case 2:
-                                    error_4 = _a.sent();
-                                    console.error("Error inserted of users", error_4);
+                                    error_8 = _a.sent();
+                                    console.error("Error inserted of users", error_8);
                                     return [3 /*break*/, 3];
                                 case 3: return [2 /*return*/];
                             }
                         });
                     }); });
-                    app.get("/users", verifyToken, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
-                        var result, error_5;
+                    app.get("/users", verifyToken, verifyAdmin, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+                        var result, error_9;
                         return __generator(this, function (_a) {
                             switch (_a.label) {
                                 case 0:
@@ -206,8 +320,8 @@ function run() {
                                     res.send(result);
                                     return [3 /*break*/, 4];
                                 case 3:
-                                    error_5 = _a.sent();
-                                    console.error("Error getting all users data", error_5);
+                                    error_9 = _a.sent();
+                                    console.error("Error getting all users data", error_9);
                                     res.status(500).json({ error: "Internal server error" });
                                     return [3 /*break*/, 4];
                                 case 4: return [2 /*return*/];
@@ -215,7 +329,7 @@ function run() {
                         });
                     }); });
                     app.delete("/users/:id", function (req, res) { return __awaiter(_this, void 0, void 0, function () {
-                        var id, query, result, error_6;
+                        var id, query, result, error_10;
                         return __generator(this, function (_a) {
                             switch (_a.label) {
                                 case 0:
@@ -228,16 +342,16 @@ function run() {
                                     res.send(result);
                                     return [3 /*break*/, 3];
                                 case 2:
-                                    error_6 = _a.sent();
-                                    console.error("Error deleting users", error_6);
+                                    error_10 = _a.sent();
+                                    console.error("Error deleting users", error_10);
                                     return [3 /*break*/, 3];
                                 case 3: return [2 /*return*/];
                             }
                         });
                     }); });
                     // Make Admin api
-                    app.patch("/users/admin/:id", function (req, res) { return __awaiter(_this, void 0, void 0, function () {
-                        var id, filter, updatedDoc, result, error_7;
+                    app.patch("/users/admin/:id", verifyToken, verifyAdmin, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+                        var id, filter, updatedDoc, result, error_11;
                         return __generator(this, function (_a) {
                             switch (_a.label) {
                                 case 0:
@@ -255,8 +369,8 @@ function run() {
                                     res.send(result);
                                     return [3 /*break*/, 3];
                                 case 2:
-                                    error_7 = _a.sent();
-                                    console.error("Error for making a user Admin", error_7);
+                                    error_11 = _a.sent();
+                                    console.error("Error for making a user Admin", error_11);
                                     return [3 /*break*/, 3];
                                 case 3: return [2 /*return*/];
                             }
@@ -264,7 +378,7 @@ function run() {
                     }); });
                     // Cart Related Apis
                     app.post("/cart", function (req, res) { return __awaiter(_this, void 0, void 0, function () {
-                        var cartItem, result, error_8;
+                        var cartItem, result, error_12;
                         return __generator(this, function (_a) {
                             switch (_a.label) {
                                 case 0:
@@ -276,15 +390,15 @@ function run() {
                                     res.send(result);
                                     return [3 /*break*/, 3];
                                 case 2:
-                                    error_8 = _a.sent();
-                                    console.error("Error inserting Data for cart", error_8);
+                                    error_12 = _a.sent();
+                                    console.error("Error inserting Data for cart", error_12);
                                     return [3 /*break*/, 3];
                                 case 3: return [2 /*return*/];
                             }
                         });
                     }); });
-                    app.delete("/cart/:id", function (req, res) { return __awaiter(_this, void 0, void 0, function () {
-                        var id, query, result, error_9;
+                    app.delete("/cart/:id", verifyToken, verifyAdmin, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+                        var id, query, result, error_13;
                         return __generator(this, function (_a) {
                             switch (_a.label) {
                                 case 0:
@@ -297,8 +411,8 @@ function run() {
                                     res.send(result);
                                     return [3 /*break*/, 3];
                                 case 2:
-                                    error_9 = _a.sent();
-                                    console.error("Error deleting data from cart", error_9);
+                                    error_13 = _a.sent();
+                                    console.error("Error deleting data from cart", error_13);
                                     res.status(500).send({ message: "Internal Server Error" }); // It's good practice to send a response in case of an error
                                     return [3 /*break*/, 3];
                                 case 3: return [2 /*return*/];
@@ -306,7 +420,7 @@ function run() {
                         });
                     }); });
                     app.get("/cart", function (req, res) { return __awaiter(_this, void 0, void 0, function () {
-                        var email, query, result, error_10;
+                        var email, query, result, error_14;
                         return __generator(this, function (_a) {
                             switch (_a.label) {
                                 case 0:
@@ -319,8 +433,39 @@ function run() {
                                     res.send(result);
                                     return [3 /*break*/, 3];
                                 case 2:
-                                    error_10 = _a.sent();
-                                    console.error(error_10, "cart collection error");
+                                    error_14 = _a.sent();
+                                    console.error(error_14, "cart collection error");
+                                    return [3 /*break*/, 3];
+                                case 3: return [2 /*return*/];
+                            }
+                        });
+                    }); });
+                    // Payment Related Apis
+                    // Payment Intent
+                    app.post("/create-payment-intent", function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+                        var price, amount, paymentIntent, error_15;
+                        return __generator(this, function (_a) {
+                            switch (_a.label) {
+                                case 0:
+                                    _a.trys.push([0, 2, , 3]);
+                                    price = req.body.price;
+                                    amount = parseInt((price * 100).toFixed(2));
+                                    console.log(amount, "amount inside the intent");
+                                    return [4 /*yield*/, stripe.paymentIntents.create({
+                                            amount: amount,
+                                            currency: "usd",
+                                            payment_method_types: ['card'],
+                                        })];
+                                case 1:
+                                    paymentIntent = _a.sent();
+                                    console.log("Client secret in the server", paymentIntent.client_secret);
+                                    res.send({
+                                        clientSecret: paymentIntent.client_secret
+                                    });
+                                    return [3 /*break*/, 3];
+                                case 2:
+                                    error_15 = _a.sent();
+                                    console.error("Error from the payment-intent-server", error_15);
                                     return [3 /*break*/, 3];
                                 case 3: return [2 /*return*/];
                             }

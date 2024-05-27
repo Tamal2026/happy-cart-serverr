@@ -1,12 +1,16 @@
-import { error } from "console";
 import { MongoClient, ObjectId, ServerApiVersion } from "mongodb";
 const jwt = require("jsonwebtoken");
 const express = require("express");
+require("dotenv").config();
+
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const app = express();
+
+
 const cors = require("cors");
 
 const port = process.env.PORT || 5000;
-require("dotenv").config();
+
 // Middleware
 
 app.use(cors());
@@ -45,7 +49,6 @@ async function run() {
       res.send({ token });
     });
     // MiddleWares
-
     const verifyToken = (req, res, next) => {
       console.log(req.headers);
       if (!req.headers.authorization) {
@@ -64,8 +67,18 @@ async function run() {
         }
       );
     };
-
     // Verify Admin
+    const verifyAdmin = async (req, res, next) => {
+      const email = req.decoded.email;
+      const query = { email: email };
+      const user = await userCollection.findOne(query);
+      const isAdmin = user?.role === "admin";
+      if (!isAdmin) {
+        return res.status(403).send({ message: "Forbidden access" });
+      }
+      next();
+    };
+
     app.get("/users/admin/:email", verifyToken, async (req, res) => {
       const email = req.params.email;
       if (email !== req.decoded.email) {
@@ -75,7 +88,7 @@ async function run() {
       const user = await userCollection.findOne(query);
       let admin = false;
       if (user) {
-      admin =  user?.role === "admin";
+        admin = user?.role === "admin";
       }
       res.send({ admin });
     });
@@ -92,6 +105,73 @@ async function run() {
         res.status(500).json({ error: "Internal server error" });
       }
     });
+
+    // Updated Product
+    app.get("/all-products/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const result = await allProductsCollection.findOne(query);
+        res.send(result);
+      } catch (error) {
+        console.error("Error from the updated product ");
+      }
+    });
+
+    app.patch("/all-products/:id", async (req, res) => {
+      try {
+        const product = req.body;
+        const id = req.params.id;
+        const filter = { _id: new ObjectId(id) };
+        const updatedDoc = {
+          $set: {
+            name: product.name,
+            category: product.category,
+            price: product.price,
+            img: product.img,
+            short_desc: product.short_desc,
+          },
+        };
+        const result = await allProductsCollection.updateOne(
+          filter,
+          updatedDoc
+        );
+        res.send(result);
+      } catch (error) {
+        console.error("Error from the Admin updated product");
+      }
+    });
+
+    app.post("/all-products", async (req, res) => {
+      try {
+        const product = req.body;
+        const result = await allProductsCollection.insertOne(product);
+        res.send(result);
+      } catch (error) {
+        console.error("Error from the new add product insert", error);
+      }
+    });
+
+    // delete product from manage users admin dashboard
+    app.delete(
+      "/all-products/:id",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        try {
+          const id = req.params.id;
+          const query = { _id: new ObjectId(id) };
+          const result = await allProductsCollection.deleteOne(query);
+          res.send(result);
+        } catch (error) {
+          console.error(
+            "Error from delete product from the admin dashboard",
+            error
+          );
+        }
+      }
+    );
+
     // get data for best seller Products
     app.get("/best-seller-products", async (req, res) => {
       try {
@@ -118,7 +198,8 @@ async function run() {
         console.error("Error inserted of users", error);
       }
     });
-    app.get("/users", verifyToken,  async (req, res) => {
+
+    app.get("/users", verifyToken, verifyAdmin, async (req, res) => {
       console.log(req.headers);
       try {
         const result = await userCollection.find().toArray();
@@ -141,21 +222,26 @@ async function run() {
     });
 
     // Make Admin api
-    app.patch("/users/admin/:id", async (req, res) => {
-      try {
-        const id = req.params.id;
-        const filter = { _id: new ObjectId(id) };
-        const updatedDoc = {
-          $set: {
-            role: "admin",
-          },
-        };
-        const result = await userCollection.updateOne(filter, updatedDoc);
-        res.send(result);
-      } catch (error) {
-        console.error("Error for making a user Admin", error);
+    app.patch(
+      "/users/admin/:id",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        try {
+          const id = req.params.id;
+          const filter = { _id: new ObjectId(id) };
+          const updatedDoc = {
+            $set: {
+              role: "admin",
+            },
+          };
+          const result = await userCollection.updateOne(filter, updatedDoc);
+          res.send(result);
+        } catch (error) {
+          console.error("Error for making a user Admin", error);
+        }
       }
-    });
+    );
 
     // Cart Related Apis
     app.post("/cart", async (req, res) => {
@@ -168,7 +254,7 @@ async function run() {
       }
     });
 
-    app.delete("/cart/:id", async (req, res) => {
+    app.delete("/cart/:id", verifyToken, verifyAdmin, async (req, res) => {
       try {
         const id = req.params.id; // Fix the typo here
         const query = { _id: new ObjectId(id) };
@@ -187,6 +273,29 @@ async function run() {
         res.send(result);
       } catch (error) {
         console.error(error, "cart collection error");
+      }
+    });
+
+    // Payment Related Apis
+
+    // Payment Intent
+    app.post("/create-payment-intent", async (req, res) => {
+      try {
+        const { price } = req.body;
+        const amount = parseInt((price * 100).toFixed(2));
+        console.log(amount, "amount inside the intent");
+
+        const paymentIntent = await stripe.paymentIntents.create({
+          amount: amount,
+          currency: "usd",
+          payment_method_types: ['card'],
+        });
+        console.log("Client secret in the server", paymentIntent.client_secret)
+        res.send({
+          clientSecret: paymentIntent.client_secret
+        });
+      } catch (error) {
+        console.error("Error from the payment-intent-server", error);
       }
     });
 
