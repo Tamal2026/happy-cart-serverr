@@ -6,7 +6,6 @@ require("dotenv").config();
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const app = express();
 
-
 const cors = require("cors");
 
 const port = process.env.PORT || 5000;
@@ -38,6 +37,7 @@ async function run() {
       .db("happy-cart")
       .collection("best-seller-products");
     const cartCollection = client.db("happy-cart").collection("cart");
+    const paymentCollection = client.db("happy-cart").collection("payments");
 
     // Jwt Related Api
 
@@ -50,7 +50,7 @@ async function run() {
     });
     // MiddleWares
     const verifyToken = (req, res, next) => {
-      console.log(req.headers);
+      
       if (!req.headers.authorization) {
         return res.status(401).send({ message: "Forbidden Access" });
       }
@@ -288,15 +288,42 @@ async function run() {
         const paymentIntent = await stripe.paymentIntents.create({
           amount: amount,
           currency: "usd",
-          payment_method_types: ['card'],
+          payment_method_types: ["card"],
         });
-        console.log("Client secret in the server", paymentIntent.client_secret)
+        console.log("Client secret in the server", paymentIntent.client_secret);
         res.send({
-          clientSecret: paymentIntent.client_secret
+          clientSecret: paymentIntent.client_secret,
         });
       } catch (error) {
         console.error("Error from the payment-intent-server", error);
       }
+    });
+
+    app.post("/payments", async (req, res) => {
+      try {
+        const payment = req.body;
+        const paymentResult = await paymentCollection.insertOne(payment);
+        const query = {
+          _id: {
+            $in: payment.cartIds.map((id) => new ObjectId(id)),
+          },
+        };
+        const deleResult = await cartCollection.deleteMany(query);
+        res.send({ paymentResult, deleResult });
+      } catch (error) {
+        console.error("Error from payments confirm server", error);
+      }
+    });
+
+    app.get("/payments/:email", verifyToken, async (req, res) => {
+      try {
+        const query = { email: req.params.email };
+        if (req.params.email !== req.decoded.email) {
+          return res.status(403).send({ message: "Forbidden Access" });
+        }
+        const result = await paymentCollection.find(query).toArray();
+        res.send(result);
+      } catch (error) {}
     });
 
     // Send a ping to confirm a successful connection

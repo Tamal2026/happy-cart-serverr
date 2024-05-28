@@ -58,7 +58,7 @@ var client = new mongodb_1.MongoClient(uri, {
 });
 function run() {
     return __awaiter(this, void 0, void 0, function () {
-        var userCollection_1, allProductsCollection_1, bestSellerProductCollection_1, cartCollection_1, verifyToken, verifyAdmin, error_1;
+        var userCollection_1, allProductsCollection_1, bestSellerProductCollection_1, cartCollection_1, paymentCollection_1, verifyToken, verifyAdmin, error_1;
         var _this = this;
         return __generator(this, function (_a) {
             switch (_a.label) {
@@ -75,6 +75,7 @@ function run() {
                         .db("happy-cart")
                         .collection("best-seller-products");
                     cartCollection_1 = client.db("happy-cart").collection("cart");
+                    paymentCollection_1 = client.db("happy-cart").collection("payments");
                     // Jwt Related Api
                     app.post("/jwt", function (req, res) { return __awaiter(_this, void 0, void 0, function () {
                         var user, token;
@@ -88,7 +89,6 @@ function run() {
                         });
                     }); });
                     verifyToken = function (req, res, next) {
-                        console.log(req.headers);
                         if (!req.headers.authorization) {
                             return res.status(401).send({ message: "Forbidden Access" });
                         }
@@ -454,18 +454,68 @@ function run() {
                                     return [4 /*yield*/, stripe.paymentIntents.create({
                                             amount: amount,
                                             currency: "usd",
-                                            payment_method_types: ['card'],
+                                            payment_method_types: ["card"],
                                         })];
                                 case 1:
                                     paymentIntent = _a.sent();
                                     console.log("Client secret in the server", paymentIntent.client_secret);
                                     res.send({
-                                        clientSecret: paymentIntent.client_secret
+                                        clientSecret: paymentIntent.client_secret,
                                     });
                                     return [3 /*break*/, 3];
                                 case 2:
                                     error_15 = _a.sent();
                                     console.error("Error from the payment-intent-server", error_15);
+                                    return [3 /*break*/, 3];
+                                case 3: return [2 /*return*/];
+                            }
+                        });
+                    }); });
+                    app.post("/payments", function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+                        var payment, paymentResult, query, deleResult, error_16;
+                        return __generator(this, function (_a) {
+                            switch (_a.label) {
+                                case 0:
+                                    _a.trys.push([0, 3, , 4]);
+                                    payment = req.body;
+                                    return [4 /*yield*/, paymentCollection_1.insertOne(payment)];
+                                case 1:
+                                    paymentResult = _a.sent();
+                                    query = {
+                                        _id: {
+                                            $in: payment.cartIds.map(function (id) { return new mongodb_1.ObjectId(id); }),
+                                        },
+                                    };
+                                    return [4 /*yield*/, cartCollection_1.deleteMany(query)];
+                                case 2:
+                                    deleResult = _a.sent();
+                                    res.send({ paymentResult: paymentResult, deleResult: deleResult });
+                                    return [3 /*break*/, 4];
+                                case 3:
+                                    error_16 = _a.sent();
+                                    console.error("Error from payments confirm server", error_16);
+                                    return [3 /*break*/, 4];
+                                case 4: return [2 /*return*/];
+                            }
+                        });
+                    }); });
+                    app.get("/payments/:email", verifyToken, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+                        var query, result, error_17;
+                        return __generator(this, function (_a) {
+                            switch (_a.label) {
+                                case 0:
+                                    _a.trys.push([0, 2, , 3]);
+                                    query = { email: req.params.email };
+                                    if (req.params.email !== req.decoded.email) {
+                                        return [2 /*return*/, res.status(403).send({ message: "Forbidden Access" })];
+                                    }
+                                    return [4 /*yield*/, paymentCollection_1.find(query).toArray()];
+                                case 1:
+                                    result = _a.sent();
+                                    res.send(result);
+                                    return [3 /*break*/, 3];
+                                case 2:
+                                    error_17 = _a.sent();
                                     return [3 /*break*/, 3];
                                 case 3: return [2 /*return*/];
                             }
