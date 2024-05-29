@@ -1,4 +1,5 @@
 import { MongoClient, ObjectId, ServerApiVersion } from "mongodb";
+import { pipeline } from "stream";
 const jwt = require("jsonwebtoken");
 const express = require("express");
 require("dotenv").config();
@@ -50,7 +51,6 @@ async function run() {
     });
     // MiddleWares
     const verifyToken = (req, res, next) => {
-      
       if (!req.headers.authorization) {
         return res.status(401).send({ message: "Forbidden Access" });
       }
@@ -254,7 +254,7 @@ async function run() {
       }
     });
 
-    app.delete("/cart/:id", verifyToken, verifyAdmin, async (req, res) => {
+    app.delete("/cart/:id", verifyToken, async (req, res) => {
       try {
         const id = req.params.id; // Fix the typo here
         const query = { _id: new ObjectId(id) };
@@ -324,6 +324,83 @@ async function run() {
         const result = await paymentCollection.find(query).toArray();
         res.send(result);
       } catch (error) {}
+    });
+
+    // Admin overview related apis
+    // stats or analytics
+    app.get("/admin-stats", verifyToken, verifyAdmin, async (req, res) => {
+      try {
+        const users = await userCollection.estimatedDocumentCount();
+        const totalProducts =
+          await allProductsCollection.estimatedDocumentCount();
+        const totalOrders = await paymentCollection.estimatedDocumentCount();
+
+        const result = await paymentCollection
+          .aggregate([
+            {
+              $group: {
+                _id: null,
+                totalRevenue: {
+                  $sum: "$price",
+                },
+              },
+            },
+          ])
+          .toArray();
+        const revenue = result.length > 0 ? result[0].totalRevenue : 0;
+        res.send({ users, totalProducts, totalOrders, revenue });
+      } catch (error) {}
+    });
+    // using aggregate pipline
+    app.get("/order-stats",verifyToken, verifyAdmin, async (req, res) => {
+      try {
+        const result = await paymentCollection
+          .aggregate([
+            {
+              $unwind: "$productItemIds",
+            },
+            {
+              $lookup: {
+                from: "all-products",
+                let: { productId: { $toObjectId: "$productItemIds" } }, // Convert productItemIds to ObjectId
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: { $eq: ["$_id", "$$productId"] },
+                    },
+                  },
+                ],
+                as: "productItem",
+              },
+            },
+            {
+              $unwind: "$productItem",
+            },
+            {
+              $group:{
+               _id:"$productItem.category",
+               quantity:{$sum:1},
+               revenue:{$sum:"$productItem.price"}
+              }
+            },
+            {
+              $project:{
+                _id:0,
+                category:"$_id",
+                quantity:"$quantity",
+                revenue:"$revenue"
+              }
+            }
+          ])
+          .toArray();
+
+        console.log("Aggregation Result:", result); // Log the result
+
+        res.send(result);
+      } catch (error) {
+        console.error("Error fetching order stats:", error);
+        res.status(500).json({ error: "Internal server error" });
+      }
     });
 
     // Send a ping to confirm a successful connection

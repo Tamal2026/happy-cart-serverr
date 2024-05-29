@@ -397,7 +397,7 @@ function run() {
                             }
                         });
                     }); });
-                    app.delete("/cart/:id", verifyToken, verifyAdmin, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+                    app.delete("/cart/:id", verifyToken, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
                         var id, query, result, error_13;
                         return __generator(this, function (_a) {
                             switch (_a.label) {
@@ -516,6 +516,107 @@ function run() {
                                     return [3 /*break*/, 3];
                                 case 2:
                                     error_17 = _a.sent();
+                                    return [3 /*break*/, 3];
+                                case 3: return [2 /*return*/];
+                            }
+                        });
+                    }); });
+                    // Admin overview related apis
+                    // stats or analytics
+                    app.get("/admin-stats", verifyToken, verifyAdmin, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+                        var users, totalProducts, totalOrders, result, revenue, error_18;
+                        return __generator(this, function (_a) {
+                            switch (_a.label) {
+                                case 0:
+                                    _a.trys.push([0, 5, , 6]);
+                                    return [4 /*yield*/, userCollection_1.estimatedDocumentCount()];
+                                case 1:
+                                    users = _a.sent();
+                                    return [4 /*yield*/, allProductsCollection_1.estimatedDocumentCount()];
+                                case 2:
+                                    totalProducts = _a.sent();
+                                    return [4 /*yield*/, paymentCollection_1.estimatedDocumentCount()];
+                                case 3:
+                                    totalOrders = _a.sent();
+                                    return [4 /*yield*/, paymentCollection_1
+                                            .aggregate([
+                                            {
+                                                $group: {
+                                                    _id: null,
+                                                    totalRevenue: {
+                                                        $sum: "$price",
+                                                    },
+                                                },
+                                            },
+                                        ])
+                                            .toArray()];
+                                case 4:
+                                    result = _a.sent();
+                                    revenue = result.length > 0 ? result[0].totalRevenue : 0;
+                                    res.send({ users: users, totalProducts: totalProducts, totalOrders: totalOrders, revenue: revenue });
+                                    return [3 /*break*/, 6];
+                                case 5:
+                                    error_18 = _a.sent();
+                                    return [3 /*break*/, 6];
+                                case 6: return [2 /*return*/];
+                            }
+                        });
+                    }); });
+                    // using aggregate pipline
+                    app.get("/order-stats", verifyToken, verifyAdmin, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+                        var result, error_19;
+                        return __generator(this, function (_a) {
+                            switch (_a.label) {
+                                case 0:
+                                    _a.trys.push([0, 2, , 3]);
+                                    return [4 /*yield*/, paymentCollection_1
+                                            .aggregate([
+                                            {
+                                                $unwind: "$productItemIds",
+                                            },
+                                            {
+                                                $lookup: {
+                                                    from: "all-products",
+                                                    let: { productId: { $toObjectId: "$productItemIds" } }, // Convert productItemIds to ObjectId
+                                                    pipeline: [
+                                                        {
+                                                            $match: {
+                                                                $expr: { $eq: ["$_id", "$$productId"] },
+                                                            },
+                                                        },
+                                                    ],
+                                                    as: "productItem",
+                                                },
+                                            },
+                                            {
+                                                $unwind: "$productItem",
+                                            },
+                                            {
+                                                $group: {
+                                                    _id: "$productItem.category",
+                                                    quantity: { $sum: 1 },
+                                                    revenue: { $sum: "$productItem.price" }
+                                                }
+                                            },
+                                            {
+                                                $project: {
+                                                    _id: 0,
+                                                    category: "$_id",
+                                                    quantity: "$quantity",
+                                                    revenue: "$revenue"
+                                                }
+                                            }
+                                        ])
+                                            .toArray()];
+                                case 1:
+                                    result = _a.sent();
+                                    console.log("Aggregation Result:", result); // Log the result
+                                    res.send(result);
+                                    return [3 /*break*/, 3];
+                                case 2:
+                                    error_19 = _a.sent();
+                                    console.error("Error fetching order stats:", error_19);
+                                    res.status(500).json({ error: "Internal server error" });
                                     return [3 /*break*/, 3];
                                 case 3: return [2 /*return*/];
                             }
