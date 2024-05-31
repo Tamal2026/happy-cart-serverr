@@ -39,6 +39,7 @@ async function run() {
       .collection("best-seller-products");
     const cartCollection = client.db("happy-cart").collection("cart");
     const paymentCollection = client.db("happy-cart").collection("payments");
+    const reviewsCollection = client.db("happy-cart").collection("reviews");
 
     // Jwt Related Api
 
@@ -275,6 +276,17 @@ async function run() {
         console.error(error, "cart collection error");
       }
     });
+    // User Dashboard Overview
+    app.get("/userOverview/", async (req, res) => {
+      try {
+        const email = req.query.email;
+        const query = { email: email };
+        const result = await paymentCollection.find(query).toArray();
+        res.send(result);
+      } catch (error) {
+        console.error("Erros From the userOVer view", error);
+      }
+    });
 
     // Payment Related Apis
 
@@ -352,7 +364,7 @@ async function run() {
       } catch (error) {}
     });
     // using aggregate pipline
-    app.get("/order-stats",verifyToken, verifyAdmin, async (req, res) => {
+    app.get("/order-stats", async (req, res) => {
       try {
         const result = await paymentCollection
           .aggregate([
@@ -377,20 +389,20 @@ async function run() {
               $unwind: "$productItem",
             },
             {
-              $group:{
-               _id:"$productItem.category",
-               quantity:{$sum:1},
-               revenue:{$sum:"$productItem.price"}
-              }
+              $group: {
+                _id: "$productItem.category",
+                quantity: { $sum: 1 },
+                revenue: { $sum: "$productItem.price" },
+              },
             },
             {
-              $project:{
-                _id:0,
-                category:"$_id",
-                quantity:"$quantity",
-                revenue:"$revenue"
-              }
-            }
+              $project: {
+                _id: 0,
+                category: "$_id",
+                quantity: "$quantity",
+                revenue: "$revenue",
+              },
+            },
           ])
           .toArray();
 
@@ -400,6 +412,17 @@ async function run() {
       } catch (error) {
         console.error("Error fetching order stats:", error);
         res.status(500).json({ error: "Internal server error" });
+      }
+    });
+
+    // Review Relatied api
+    app.post("/reviews", async (req, res) => {
+      try {
+        const review = req.body;
+        const result = await reviewsCollection.insertOne(review);
+        res.send(result);
+      } catch (error) {
+        console.error("Error from the revies adding to db", error);
       }
     });
 

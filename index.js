@@ -58,7 +58,7 @@ var client = new mongodb_1.MongoClient(uri, {
 });
 function run() {
     return __awaiter(this, void 0, void 0, function () {
-        var userCollection_1, allProductsCollection_1, bestSellerProductCollection_1, cartCollection_1, paymentCollection_1, verifyToken, verifyAdmin, error_1;
+        var userCollection_1, allProductsCollection_1, bestSellerProductCollection_1, cartCollection_1, paymentCollection_1, reviewsCollection_1, verifyToken, verifyAdmin, error_1;
         var _this = this;
         return __generator(this, function (_a) {
             switch (_a.label) {
@@ -76,6 +76,7 @@ function run() {
                         .collection("best-seller-products");
                     cartCollection_1 = client.db("happy-cart").collection("cart");
                     paymentCollection_1 = client.db("happy-cart").collection("payments");
+                    reviewsCollection_1 = client.db("happy-cart").collection("reviews");
                     // Jwt Related Api
                     app.post("/jwt", function (req, res) { return __awaiter(_this, void 0, void 0, function () {
                         var user, token;
@@ -440,10 +441,32 @@ function run() {
                             }
                         });
                     }); });
+                    // User Dashboard Overview
+                    app.get("/userOverview/", function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+                        var email, query, result, error_15;
+                        return __generator(this, function (_a) {
+                            switch (_a.label) {
+                                case 0:
+                                    _a.trys.push([0, 2, , 3]);
+                                    email = req.query.email;
+                                    query = { email: email };
+                                    return [4 /*yield*/, paymentCollection_1.find(query).toArray()];
+                                case 1:
+                                    result = _a.sent();
+                                    res.send(result);
+                                    return [3 /*break*/, 3];
+                                case 2:
+                                    error_15 = _a.sent();
+                                    console.error("Erros From the userOVer view", error_15);
+                                    return [3 /*break*/, 3];
+                                case 3: return [2 /*return*/];
+                            }
+                        });
+                    }); });
                     // Payment Related Apis
                     // Payment Intent
                     app.post("/create-payment-intent", function (req, res) { return __awaiter(_this, void 0, void 0, function () {
-                        var price, amount, paymentIntent, error_15;
+                        var price, amount, paymentIntent, error_16;
                         return __generator(this, function (_a) {
                             switch (_a.label) {
                                 case 0:
@@ -464,15 +487,15 @@ function run() {
                                     });
                                     return [3 /*break*/, 3];
                                 case 2:
-                                    error_15 = _a.sent();
-                                    console.error("Error from the payment-intent-server", error_15);
+                                    error_16 = _a.sent();
+                                    console.error("Error from the payment-intent-server", error_16);
                                     return [3 /*break*/, 3];
                                 case 3: return [2 /*return*/];
                             }
                         });
                     }); });
                     app.post("/payments", function (req, res) { return __awaiter(_this, void 0, void 0, function () {
-                        var payment, paymentResult, query, deleResult, error_16;
+                        var payment, paymentResult, query, deleResult, error_17;
                         return __generator(this, function (_a) {
                             switch (_a.label) {
                                 case 0:
@@ -492,15 +515,15 @@ function run() {
                                     res.send({ paymentResult: paymentResult, deleResult: deleResult });
                                     return [3 /*break*/, 4];
                                 case 3:
-                                    error_16 = _a.sent();
-                                    console.error("Error from payments confirm server", error_16);
+                                    error_17 = _a.sent();
+                                    console.error("Error from payments confirm server", error_17);
                                     return [3 /*break*/, 4];
                                 case 4: return [2 /*return*/];
                             }
                         });
                     }); });
                     app.get("/payments/:email", verifyToken, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
-                        var query, result, error_17;
+                        var query, result, error_18;
                         return __generator(this, function (_a) {
                             switch (_a.label) {
                                 case 0:
@@ -515,7 +538,7 @@ function run() {
                                     res.send(result);
                                     return [3 /*break*/, 3];
                                 case 2:
-                                    error_17 = _a.sent();
+                                    error_18 = _a.sent();
                                     return [3 /*break*/, 3];
                                 case 3: return [2 /*return*/];
                             }
@@ -524,7 +547,7 @@ function run() {
                     // Admin overview related apis
                     // stats or analytics
                     app.get("/admin-stats", verifyToken, verifyAdmin, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
-                        var users, totalProducts, totalOrders, result, revenue, error_18;
+                        var users, totalProducts, totalOrders, result, revenue, error_19;
                         return __generator(this, function (_a) {
                             switch (_a.label) {
                                 case 0:
@@ -556,15 +579,15 @@ function run() {
                                     res.send({ users: users, totalProducts: totalProducts, totalOrders: totalOrders, revenue: revenue });
                                     return [3 /*break*/, 6];
                                 case 5:
-                                    error_18 = _a.sent();
+                                    error_19 = _a.sent();
                                     return [3 /*break*/, 6];
                                 case 6: return [2 /*return*/];
                             }
                         });
                     }); });
                     // using aggregate pipline
-                    app.get("/order-stats", verifyToken, verifyAdmin, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
-                        var result, error_19;
+                    app.get("/order-stats", function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+                        var result, error_20;
                         return __generator(this, function (_a) {
                             switch (_a.label) {
                                 case 0:
@@ -595,17 +618,17 @@ function run() {
                                                 $group: {
                                                     _id: "$productItem.category",
                                                     quantity: { $sum: 1 },
-                                                    revenue: { $sum: "$productItem.price" }
-                                                }
+                                                    revenue: { $sum: "$productItem.price" },
+                                                },
                                             },
                                             {
                                                 $project: {
                                                     _id: 0,
                                                     category: "$_id",
                                                     quantity: "$quantity",
-                                                    revenue: "$revenue"
-                                                }
-                                            }
+                                                    revenue: "$revenue",
+                                                },
+                                            },
                                         ])
                                             .toArray()];
                                 case 1:
@@ -614,9 +637,30 @@ function run() {
                                     res.send(result);
                                     return [3 /*break*/, 3];
                                 case 2:
-                                    error_19 = _a.sent();
-                                    console.error("Error fetching order stats:", error_19);
+                                    error_20 = _a.sent();
+                                    console.error("Error fetching order stats:", error_20);
                                     res.status(500).json({ error: "Internal server error" });
+                                    return [3 /*break*/, 3];
+                                case 3: return [2 /*return*/];
+                            }
+                        });
+                    }); });
+                    // Review Relatied api
+                    app.post("/reviews", function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+                        var review, result, error_21;
+                        return __generator(this, function (_a) {
+                            switch (_a.label) {
+                                case 0:
+                                    _a.trys.push([0, 2, , 3]);
+                                    review = req.body;
+                                    return [4 /*yield*/, reviewsCollection_1.insertOne(review)];
+                                case 1:
+                                    result = _a.sent();
+                                    res.send(result);
+                                    return [3 /*break*/, 3];
+                                case 2:
+                                    error_21 = _a.sent();
+                                    console.error("Error from the revies adding to db", error_21);
                                     return [3 /*break*/, 3];
                                 case 3: return [2 /*return*/];
                             }
