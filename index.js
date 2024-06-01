@@ -48,7 +48,6 @@ var port = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 var uri = "mongodb+srv://".concat(process.env.DB_USER, ":").concat(process.env.DB_PASS, "@try-myself.0cjln25.mongodb.net/?retryWrites=true&w=majority&appName=Try-Myself");
-// Create a MongoClient with a MongoClientOptions object to set the Stable API version
 var client = new mongodb_1.MongoClient(uri, {
     serverApi: {
         version: mongodb_1.ServerApiVersion.v1,
@@ -58,7 +57,7 @@ var client = new mongodb_1.MongoClient(uri, {
 });
 function run() {
     return __awaiter(this, void 0, void 0, function () {
-        var userCollection_1, allProductsCollection_1, bestSellerProductCollection_1, cartCollection_1, paymentCollection_1, reviewsCollection_1, verifyToken, verifyAdmin, error_1;
+        var userCollection_1, allProductsCollection_1, bestSellerProductCollection_1, cartCollection_1, paymentCollection_1, reviewsCollection_1, wishlistCollection_1, verifyToken, verifyAdmin, error_1;
         var _this = this;
         return __generator(this, function (_a) {
             switch (_a.label) {
@@ -77,6 +76,7 @@ function run() {
                     cartCollection_1 = client.db("happy-cart").collection("cart");
                     paymentCollection_1 = client.db("happy-cart").collection("payments");
                     reviewsCollection_1 = client.db("happy-cart").collection("reviews");
+                    wishlistCollection_1 = client.db("happy-cart").collection("wishlists");
                     // Jwt Related Api
                     app.post("/jwt", function (req, res) { return __awaiter(_this, void 0, void 0, function () {
                         var user, token;
@@ -260,9 +260,84 @@ function run() {
                             }
                         });
                     }); });
+                    //  wishlist Apis
+                    app.get("/wishlist", function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+                        var email, query, result, error_7;
+                        return __generator(this, function (_a) {
+                            switch (_a.label) {
+                                case 0:
+                                    _a.trys.push([0, 2, , 3]);
+                                    email = req.query.email;
+                                    query = { email: email };
+                                    return [4 /*yield*/, wishlistCollection_1.find(query).toArray()];
+                                case 1:
+                                    result = _a.sent();
+                                    res.send(result);
+                                    return [3 /*break*/, 3];
+                                case 2:
+                                    error_7 = _a.sent();
+                                    console.error("error from the wishlist get", error_7);
+                                    return [3 /*break*/, 3];
+                                case 3: return [2 /*return*/];
+                            }
+                        });
+                    }); });
+                    app.post("/wishlist", function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+                        var product, existingProduct, result, error_8;
+                        return __generator(this, function (_a) {
+                            switch (_a.label) {
+                                case 0:
+                                    _a.trys.push([0, 3, , 4]);
+                                    product = req.body;
+                                    return [4 /*yield*/, wishlistCollection_1.findOne({
+                                            email: product.email,
+                                            name: product.name,
+                                        })];
+                                case 1:
+                                    existingProduct = _a.sent();
+                                    if (existingProduct) {
+                                        return [2 /*return*/, res.send({
+                                                message: "This product already in wishlist",
+                                                insertedId: null,
+                                            })];
+                                    }
+                                    return [4 /*yield*/, wishlistCollection_1.insertOne(product)];
+                                case 2:
+                                    result = _a.sent();
+                                    res.send(result);
+                                    return [3 /*break*/, 4];
+                                case 3:
+                                    error_8 = _a.sent();
+                                    console.error("Error from data added to db");
+                                    return [3 /*break*/, 4];
+                                case 4: return [2 /*return*/];
+                            }
+                        });
+                    }); });
+                    app.delete("/wishlist/:id", function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+                        var id, query, result, error_9;
+                        return __generator(this, function (_a) {
+                            switch (_a.label) {
+                                case 0:
+                                    _a.trys.push([0, 2, , 3]);
+                                    id = req.params.id;
+                                    query = { _id: new mongodb_1.ObjectId(id) };
+                                    return [4 /*yield*/, wishlistCollection_1.deleteOne(query)];
+                                case 1:
+                                    result = _a.sent();
+                                    res.send(result);
+                                    return [3 /*break*/, 3];
+                                case 2:
+                                    error_9 = _a.sent();
+                                    console.error("Error from the deleting wishlist item", error_9);
+                                    return [3 /*break*/, 3];
+                                case 3: return [2 /*return*/];
+                            }
+                        });
+                    }); });
                     // get data for best seller Products
                     app.get("/best-seller-products", function (req, res) { return __awaiter(_this, void 0, void 0, function () {
-                        var result, error_7;
+                        var result, error_10;
                         return __generator(this, function (_a) {
                             switch (_a.label) {
                                 case 0:
@@ -273,8 +348,8 @@ function run() {
                                     res.send(result);
                                     return [3 /*break*/, 3];
                                 case 2:
-                                    error_7 = _a.sent();
-                                    console.error("Error Fetching Best seller Products", error_7);
+                                    error_10 = _a.sent();
+                                    console.error("Error Fetching Best seller Products", error_10);
                                     return [3 /*break*/, 3];
                                 case 3: return [2 /*return*/];
                             }
@@ -282,7 +357,7 @@ function run() {
                     }); });
                     //  Users Related Apis
                     app.post("/users", function (req, res) { return __awaiter(_this, void 0, void 0, function () {
-                        var user, query, existingUser, result, error_8;
+                        var user, query, existingUser, result, error_11;
                         return __generator(this, function (_a) {
                             switch (_a.label) {
                                 case 0:
@@ -299,15 +374,15 @@ function run() {
                                     res.send(result);
                                     return [3 /*break*/, 3];
                                 case 2:
-                                    error_8 = _a.sent();
-                                    console.error("Error inserted of users", error_8);
+                                    error_11 = _a.sent();
+                                    console.error("Error inserted of users", error_11);
                                     return [3 /*break*/, 3];
                                 case 3: return [2 /*return*/];
                             }
                         });
                     }); });
                     app.get("/users", verifyToken, verifyAdmin, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
-                        var result, error_9;
+                        var result, error_12;
                         return __generator(this, function (_a) {
                             switch (_a.label) {
                                 case 0:
@@ -321,8 +396,8 @@ function run() {
                                     res.send(result);
                                     return [3 /*break*/, 4];
                                 case 3:
-                                    error_9 = _a.sent();
-                                    console.error("Error getting all users data", error_9);
+                                    error_12 = _a.sent();
+                                    console.error("Error getting all users data", error_12);
                                     res.status(500).json({ error: "Internal server error" });
                                     return [3 /*break*/, 4];
                                 case 4: return [2 /*return*/];
@@ -330,7 +405,7 @@ function run() {
                         });
                     }); });
                     app.delete("/users/:id", function (req, res) { return __awaiter(_this, void 0, void 0, function () {
-                        var id, query, result, error_10;
+                        var id, query, result, error_13;
                         return __generator(this, function (_a) {
                             switch (_a.label) {
                                 case 0:
@@ -343,8 +418,8 @@ function run() {
                                     res.send(result);
                                     return [3 /*break*/, 3];
                                 case 2:
-                                    error_10 = _a.sent();
-                                    console.error("Error deleting users", error_10);
+                                    error_13 = _a.sent();
+                                    console.error("Error deleting users", error_13);
                                     return [3 /*break*/, 3];
                                 case 3: return [2 /*return*/];
                             }
@@ -352,7 +427,7 @@ function run() {
                     }); });
                     // Make Admin api
                     app.patch("/users/admin/:id", verifyToken, verifyAdmin, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
-                        var id, filter, updatedDoc, result, error_11;
+                        var id, filter, updatedDoc, result, error_14;
                         return __generator(this, function (_a) {
                             switch (_a.label) {
                                 case 0:
@@ -370,8 +445,8 @@ function run() {
                                     res.send(result);
                                     return [3 /*break*/, 3];
                                 case 2:
-                                    error_11 = _a.sent();
-                                    console.error("Error for making a user Admin", error_11);
+                                    error_14 = _a.sent();
+                                    console.error("Error for making a user Admin", error_14);
                                     return [3 /*break*/, 3];
                                 case 3: return [2 /*return*/];
                             }
@@ -379,7 +454,7 @@ function run() {
                     }); });
                     // Cart Related Apis
                     app.post("/cart", function (req, res) { return __awaiter(_this, void 0, void 0, function () {
-                        var cartItem, result, error_12;
+                        var cartItem, result, error_15;
                         return __generator(this, function (_a) {
                             switch (_a.label) {
                                 case 0:
@@ -391,15 +466,15 @@ function run() {
                                     res.send(result);
                                     return [3 /*break*/, 3];
                                 case 2:
-                                    error_12 = _a.sent();
-                                    console.error("Error inserting Data for cart", error_12);
+                                    error_15 = _a.sent();
+                                    console.error("Error inserting Data for cart", error_15);
                                     return [3 /*break*/, 3];
                                 case 3: return [2 /*return*/];
                             }
                         });
                     }); });
                     app.delete("/cart/:id", verifyToken, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
-                        var id, query, result, error_13;
+                        var id, query, result, error_16;
                         return __generator(this, function (_a) {
                             switch (_a.label) {
                                 case 0:
@@ -412,16 +487,16 @@ function run() {
                                     res.send(result);
                                     return [3 /*break*/, 3];
                                 case 2:
-                                    error_13 = _a.sent();
-                                    console.error("Error deleting data from cart", error_13);
-                                    res.status(500).send({ message: "Internal Server Error" }); // It's good practice to send a response in case of an error
+                                    error_16 = _a.sent();
+                                    console.error("Error deleting data from cart", error_16);
+                                    res.status(500).send({ message: "Internal Server Error" });
                                     return [3 /*break*/, 3];
                                 case 3: return [2 /*return*/];
                             }
                         });
                     }); });
                     app.get("/cart", function (req, res) { return __awaiter(_this, void 0, void 0, function () {
-                        var email, query, result, error_14;
+                        var email, query, result, error_17;
                         return __generator(this, function (_a) {
                             switch (_a.label) {
                                 case 0:
@@ -434,16 +509,16 @@ function run() {
                                     res.send(result);
                                     return [3 /*break*/, 3];
                                 case 2:
-                                    error_14 = _a.sent();
-                                    console.error(error_14, "cart collection error");
+                                    error_17 = _a.sent();
+                                    console.error(error_17, "cart collection error");
                                     return [3 /*break*/, 3];
                                 case 3: return [2 /*return*/];
                             }
                         });
                     }); });
                     // User Dashboard Overview
-                    app.get("/userOverview/", function (req, res) { return __awaiter(_this, void 0, void 0, function () {
-                        var email, query, result, error_15;
+                    app.get("/userOverview", function (req, res) { return __awaiter(_this, void 0, void 0, function () {
+                        var email, query, result, error_18;
                         return __generator(this, function (_a) {
                             switch (_a.label) {
                                 case 0:
@@ -456,8 +531,8 @@ function run() {
                                     res.send(result);
                                     return [3 /*break*/, 3];
                                 case 2:
-                                    error_15 = _a.sent();
-                                    console.error("Erros From the userOVer view", error_15);
+                                    error_18 = _a.sent();
+                                    console.error("Erros From the userOVer view", error_18);
                                     return [3 /*break*/, 3];
                                 case 3: return [2 /*return*/];
                             }
@@ -466,7 +541,7 @@ function run() {
                     // Payment Related Apis
                     // Payment Intent
                     app.post("/create-payment-intent", function (req, res) { return __awaiter(_this, void 0, void 0, function () {
-                        var price, amount, paymentIntent, error_16;
+                        var price, amount, paymentIntent, error_19;
                         return __generator(this, function (_a) {
                             switch (_a.label) {
                                 case 0:
@@ -487,15 +562,15 @@ function run() {
                                     });
                                     return [3 /*break*/, 3];
                                 case 2:
-                                    error_16 = _a.sent();
-                                    console.error("Error from the payment-intent-server", error_16);
+                                    error_19 = _a.sent();
+                                    console.error("Error from the payment-intent-server", error_19);
                                     return [3 /*break*/, 3];
                                 case 3: return [2 /*return*/];
                             }
                         });
                     }); });
                     app.post("/payments", function (req, res) { return __awaiter(_this, void 0, void 0, function () {
-                        var payment, paymentResult, query, deleResult, error_17;
+                        var payment, paymentResult, query, deleResult, error_20;
                         return __generator(this, function (_a) {
                             switch (_a.label) {
                                 case 0:
@@ -515,15 +590,15 @@ function run() {
                                     res.send({ paymentResult: paymentResult, deleResult: deleResult });
                                     return [3 /*break*/, 4];
                                 case 3:
-                                    error_17 = _a.sent();
-                                    console.error("Error from payments confirm server", error_17);
+                                    error_20 = _a.sent();
+                                    console.error("Error from payments confirm server", error_20);
                                     return [3 /*break*/, 4];
                                 case 4: return [2 /*return*/];
                             }
                         });
                     }); });
                     app.get("/payments/:email", verifyToken, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
-                        var query, result, error_18;
+                        var query, result, error_21;
                         return __generator(this, function (_a) {
                             switch (_a.label) {
                                 case 0:
@@ -538,7 +613,7 @@ function run() {
                                     res.send(result);
                                     return [3 /*break*/, 3];
                                 case 2:
-                                    error_18 = _a.sent();
+                                    error_21 = _a.sent();
                                     return [3 /*break*/, 3];
                                 case 3: return [2 /*return*/];
                             }
@@ -547,7 +622,7 @@ function run() {
                     // Admin overview related apis
                     // stats or analytics
                     app.get("/admin-stats", verifyToken, verifyAdmin, function (req, res) { return __awaiter(_this, void 0, void 0, function () {
-                        var users, totalProducts, totalOrders, result, revenue, error_19;
+                        var users, totalProducts, totalOrders, result, revenue, error_22;
                         return __generator(this, function (_a) {
                             switch (_a.label) {
                                 case 0:
@@ -579,7 +654,7 @@ function run() {
                                     res.send({ users: users, totalProducts: totalProducts, totalOrders: totalOrders, revenue: revenue });
                                     return [3 /*break*/, 6];
                                 case 5:
-                                    error_19 = _a.sent();
+                                    error_22 = _a.sent();
                                     return [3 /*break*/, 6];
                                 case 6: return [2 /*return*/];
                             }
@@ -587,7 +662,7 @@ function run() {
                     }); });
                     // using aggregate pipline
                     app.get("/order-stats", function (req, res) { return __awaiter(_this, void 0, void 0, function () {
-                        var result, error_20;
+                        var result, error_23;
                         return __generator(this, function (_a) {
                             switch (_a.label) {
                                 case 0:
@@ -637,8 +712,8 @@ function run() {
                                     res.send(result);
                                     return [3 /*break*/, 3];
                                 case 2:
-                                    error_20 = _a.sent();
-                                    console.error("Error fetching order stats:", error_20);
+                                    error_23 = _a.sent();
+                                    console.error("Error fetching order stats:", error_23);
                                     res.status(500).json({ error: "Internal server error" });
                                     return [3 /*break*/, 3];
                                 case 3: return [2 /*return*/];
@@ -647,7 +722,7 @@ function run() {
                     }); });
                     // Review Relatied api
                     app.post("/reviews", function (req, res) { return __awaiter(_this, void 0, void 0, function () {
-                        var review, result, error_21;
+                        var review, result, error_24;
                         return __generator(this, function (_a) {
                             switch (_a.label) {
                                 case 0:
@@ -659,8 +734,8 @@ function run() {
                                     res.send(result);
                                     return [3 /*break*/, 3];
                                 case 2:
-                                    error_21 = _a.sent();
-                                    console.error("Error from the revies adding to db", error_21);
+                                    error_24 = _a.sent();
+                                    console.error("Error from the revies adding to db", error_24);
                                     return [3 /*break*/, 3];
                                 case 3: return [2 /*return*/];
                             }

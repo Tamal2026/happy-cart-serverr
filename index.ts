@@ -1,5 +1,5 @@
 import { MongoClient, ObjectId, ServerApiVersion } from "mongodb";
-import { pipeline } from "stream";
+
 const jwt = require("jsonwebtoken");
 const express = require("express");
 require("dotenv").config();
@@ -18,7 +18,6 @@ app.use(express.json());
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@try-myself.0cjln25.mongodb.net/?retryWrites=true&w=majority&appName=Try-Myself`;
 
-// Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
@@ -40,6 +39,7 @@ async function run() {
     const cartCollection = client.db("happy-cart").collection("cart");
     const paymentCollection = client.db("happy-cart").collection("payments");
     const reviewsCollection = client.db("happy-cart").collection("reviews");
+    const wishlistCollection = client.db("happy-cart").collection("wishlists");
 
     // Jwt Related Api
 
@@ -172,6 +172,48 @@ async function run() {
         }
       }
     );
+    //  wishlist Apis
+
+    app.get("/wishlist", async (req, res) => {
+      try {
+        const email = req.query.email;
+        const query = { email: email };
+        const result = await wishlistCollection.find(query).toArray();
+        res.send(result);
+      } catch (error) {
+        console.error("error from the wishlist get", error);
+      }
+    });
+    app.post("/wishlist", async (req, res) => {
+      try {
+        const product = req.body;
+        const existingProduct = await wishlistCollection.findOne({
+          email:product.email,
+          name: product.name,
+        });
+        if (existingProduct) {
+          return res.send({
+            message: "This product already in wishlist",
+            insertedId: null,
+          });
+        }
+        const result = await wishlistCollection.insertOne(product);
+        res.send(result);
+      } catch (error) {
+        console.error("Error from data added to db");
+      }
+    });
+
+    app.delete("/wishlist/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const result = await wishlistCollection.deleteOne(query);
+        res.send(result);
+      } catch (error) {
+        console.error("Error from the deleting wishlist item", error);
+      }
+    });
 
     // get data for best seller Products
     app.get("/best-seller-products", async (req, res) => {
@@ -263,7 +305,7 @@ async function run() {
         res.send(result);
       } catch (error) {
         console.error("Error deleting data from cart", error);
-        res.status(500).send({ message: "Internal Server Error" }); // It's good practice to send a response in case of an error
+        res.status(500).send({ message: "Internal Server Error" });
       }
     });
     app.get("/cart", async (req, res) => {
@@ -277,7 +319,7 @@ async function run() {
       }
     });
     // User Dashboard Overview
-    app.get("/userOverview/", async (req, res) => {
+    app.get("/userOverview", async (req, res) => {
       try {
         const email = req.query.email;
         const query = { email: email };
