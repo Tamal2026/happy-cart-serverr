@@ -1,4 +1,5 @@
 import { MongoClient, ObjectId, ServerApiVersion } from "mongodb";
+import { it } from "node:test";
 
 const jwt = require("jsonwebtoken");
 const express = require("express");
@@ -188,7 +189,7 @@ async function run() {
       try {
         const product = req.body;
         const existingProduct = await wishlistCollection.findOne({
-          email:product.email,
+          email: product.email,
           name: product.name,
         });
         if (existingProduct) {
@@ -299,7 +300,7 @@ async function run() {
 
     app.delete("/cart/:id", verifyToken, async (req, res) => {
       try {
-        const id = req.params.id; // Fix the typo here
+        const id = req.params.id; 
         const query = { _id: new ObjectId(id) };
         const result = await cartCollection.deleteOne(query);
         res.send(result);
@@ -308,6 +309,30 @@ async function run() {
         res.status(500).send({ message: "Internal Server Error" });
       }
     });
+    
+    app.post("/cart", async (req, res) => {
+      try {
+        const product = req.body;
+        const existingProduct = await cartCollection.findOne({
+          name: product.name,
+        });
+        if (existingProduct) {
+          return res.send({
+            message: "This product is already in the cart",
+            insertedId: null,
+          });
+        }
+        const result = await cartCollection.insertOne(product);
+        res.send({
+          message: "Product added to cart successfully",
+          insertedId: result.insertedId,
+        });
+      } catch (error) {
+        console.error("Error adding the product to cart:", error);
+        res.status(500).send("Internal Server Error");
+      }
+    });
+    
     app.get("/cart", async (req, res) => {
       try {
         const email = req.query.email;
