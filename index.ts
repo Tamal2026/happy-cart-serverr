@@ -288,19 +288,11 @@ async function run() {
     );
 
     // Cart Related Apis
-    app.post("/cart", async (req, res) => {
-      try {
-        const cartItem = req.body;
-        const result = await cartCollection.insertOne(cartItem);
-        res.send(result);
-      } catch (error) {
-        console.error("Error inserting Data for cart", error);
-      }
-    });
+   
 
     app.delete("/cart/:id", verifyToken, async (req, res) => {
       try {
-        const id = req.params.id; 
+        const id = req.params.id;
         const query = { _id: new ObjectId(id) };
         const result = await cartCollection.deleteOne(query);
         res.send(result);
@@ -309,12 +301,13 @@ async function run() {
         res.status(500).send({ message: "Internal Server Error" });
       }
     });
-    
+
     app.post("/cart", async (req, res) => {
       try {
         const product = req.body;
         const existingProduct = await cartCollection.findOne({
           name: product.name,
+          email:product.email
         });
         if (existingProduct) {
           return res.send({
@@ -332,7 +325,7 @@ async function run() {
         res.status(500).send("Internal Server Error");
       }
     });
-    
+
     app.get("/cart", async (req, res) => {
       try {
         const email = req.query.email;
